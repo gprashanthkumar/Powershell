@@ -1,0 +1,33 @@
+﻿Write-Output "Wave: $Wave"
+Write-Output "Connecting to $Location HCX Manager..."
+Connect-HCXServer -Server usd11HCXman -User 'HCXscriptUser@us-bcs.local' -Password 'Pa$$forCLI3000'
+
+$groups = Get-HCXMobilityGroup | Where-Object { $_.Name -like "*$Wave*" }
+Write-Output "Found $($groups.Count) mobility groups for wave $Wave"
+
+$migrations = $groups | ForEach-Object {
+    Write-Output "Processing group: $($_.Name)"
+    foreach ($mig in $_.Migration) {
+        Write-Output "Adding migration: $($mig.Name)"
+        [PSCustomObject]@{
+            VMName            = $mig.Name
+            Type              = if ($mig.Name -match 'CTX') { 'Citrix' } else { 'Other' }
+            MigrationApproach = if ($mig.MigrationType) { $mig.MigrationType } else {
+                if ($_.Name -match 'RAV') { 'RAV' }
+                elseif ($_.Name -match 'ONLINE') { 'Online' }
+                elseif ($_.Name -match 'COLD') { 'Cold' }
+                else { 'Bulk' }
+            }
+            Wave              = $Wave
+            Citrix_Weblogic   = if ($mig.Name -match 'CTX') { 'Citrix' } elseif ($mig.Name -match 'webl') { 'Weblogic' } else { 'Other' }
+            ServerName        = $mig.Name
+            Location          = $Location
+        }
+    }
+}
+
+Write-Output "Total migrations collected: $($migrations.Count)"
+$migrations | Export-Csv -Path $OutputPath -NoTypeInformation
+Write-Output "Migration report saved to $OutputPath"
+
+Disconnect-HCXServer -Confirm:$false

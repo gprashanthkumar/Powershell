@@ -1,0 +1,1 @@
+﻿Connect-HCXServer -Server usd11HCXman -User 'sutenali' -Password 'UCkJ98}RPU2Yl*U[-?'
